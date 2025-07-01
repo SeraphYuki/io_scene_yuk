@@ -8,7 +8,7 @@ import math
 import bpy_extras.io_utils
 from bpy_extras import node_shader_utils
 
-def GetMesh(obj, context, GLOBAL_MATRIX):
+def GetMesh(obj, context, GLOBAL_MATRIX, doTransform):
 
 	mesh = None
 
@@ -19,7 +19,7 @@ def GetMesh(obj, context, GLOBAL_MATRIX):
 
 	if GLOBAL_MATRIX:
 		mesh.transform(GLOBAL_MATRIX @ obj.matrix_world)
-	else:
+	elif doTransform is True:
 		mesh.transform(obj.matrix_world)
 
 	import bmesh
@@ -61,7 +61,7 @@ def WriteFile(out, context, bones, GLOBAL_MATRIX=None):
 	selected = context.selected_objects[0]
 	armatureObj = selected.find_armature()
 
-	mesh = GetMesh(selected, context, GLOBAL_MATRIX)
+	mesh = GetMesh(selected, context, GLOBAL_MATRIX, doTransform)
 
 	uvLayer = mesh.uv_layers.active	.data[:]
 
@@ -439,7 +439,9 @@ def WriteCollision(out, context, selected, GLOBAL_MATRIX=None):
 
 	for selected in context.selected_objects:
 	
-		mesh = GetMesh(selected, context, GLOBAL_MATRIX)
+		mesh = GetMesh(selected, context, GLOBAL_MATRIX, False)
+		# dont want the points transformed so i can rotate in engine
+
 		# mesh = selected.to_mesh(preserve_all_data_layers=True, depsgraph=None)
 
 		mesh.calc_normals_split()
@@ -468,23 +470,6 @@ def WriteCollision(out, context, selected, GLOBAL_MATRIX=None):
 		cube[5] -= cube[2]
 		out += struct.pack("<ffffff", cube[0], cube[1], cube[2], cube[3], cube[4], cube[5])
 
-
-		vertMap = {}
-		uniqueVertsArr = []
-		
-		for vert in verts:
-			
-			vertex = mathutils.Vector(vert.co).to_4d()
-			vertex.freeze()
-			val = vertMap.get(vertex)
-			if val == None:
-				vertMap[vertex] = 1 
-				uniqueVertsArr.append(vertex)
-
-		out += struct.pack("<i", len(uniqueVertsArr))
-
-		for vert in uniqueVertsArr:
-			out += struct.pack("<fff", vert.x, vert.y, vert.z)
 
 		pos, rot, scale = (GLOBAL_MATRIX @ selected.matrix_world).decompose()
 		out += struct.pack("<ffffffffff", pos.x, pos.y, pos.z, rot.x, rot.y, rot.z, rot.w,scale.x, scale.y, scale.z)
