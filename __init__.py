@@ -13,6 +13,7 @@ bl_info = {
 }
 
 if "bpy" in locals():
+    import importlib
     if "export_yuk2" in locals():
         importlib.reload(export_yuk2)
 
