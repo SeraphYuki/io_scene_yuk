@@ -17,10 +17,11 @@ def GetMesh(obj, context, GLOBAL_MATRIX, doTransform):
 	except RuntimeError:
 		return
 
-	if GLOBAL_MATRIX:
-		mesh.transform(GLOBAL_MATRIX @ obj.matrix_world)
-	elif doTransform is True:
-		mesh.transform(obj.matrix_world)
+	if doTransform is True:
+		if GLOBAL_MATRIX:
+			mesh.transform(GLOBAL_MATRIX @ obj.matrix_world)
+		else:
+			mesh.transform(obj.matrix_world)
 
 	import bmesh
 	bm = bmesh.new()
@@ -61,7 +62,7 @@ def WriteFile(out, context, bones, GLOBAL_MATRIX=None):
 	selected = context.selected_objects[0]
 	armatureObj = selected.find_armature()
 
-	mesh = GetMesh(selected, context, GLOBAL_MATRIX, doTransform)
+	mesh = GetMesh(selected, context, GLOBAL_MATRIX, True)
 
 	uvLayer = mesh.uv_layers.active	.data[:]
 
@@ -440,7 +441,6 @@ def WriteCollision(out, context, selected, GLOBAL_MATRIX=None):
 	for selected in context.selected_objects:
 	
 		mesh = GetMesh(selected, context, GLOBAL_MATRIX, False)
-		# dont want the points transformed so i can rotate in engine
 
 		# mesh = selected.to_mesh(preserve_all_data_layers=True, depsgraph=None)
 
@@ -473,7 +473,6 @@ def WriteCollision(out, context, selected, GLOBAL_MATRIX=None):
 
 		pos, rot, scale = (GLOBAL_MATRIX @ selected.matrix_world).decompose()
 		out += struct.pack("<ffffffffff", pos.x, pos.y, pos.z, rot.x, rot.y, rot.z, rot.w,scale.x, scale.y, scale.z)
-		# out += struct.pack("<ffff", rot.x, rot.y, rot.z, rot.w)
 
 
 
