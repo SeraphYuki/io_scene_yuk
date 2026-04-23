@@ -56,7 +56,7 @@ def WriteTexture(out, image):
 
 	# out += zlib.compress(bytes(map(int, image.pixels)), 9)[2:-4]
 
-def WriteFile(out, context, bones, GLOBAL_MATRIX=None, exportNavMesh=False):
+def WriteFile(out, context, bones, GLOBAL_MATRIX=None):
 
 
 	selected = context.selected_objects[0]
@@ -67,72 +67,71 @@ def WriteFile(out, context, bones, GLOBAL_MATRIX=None, exportNavMesh=False):
 	uvLayer = mesh.uv_layers.active	.data[:]
 
 
-	if exportNavMesh is False:
-		out += struct.pack("<i", len(mesh.materials))
+	out += struct.pack("<i", len(mesh.materials))
 
-		images = []
-		topImageIndex = 0
-		imagesMap = {}
+	images = []
+	topImageIndex = 0
+	imagesMap = {}
 
-		for mat in mesh.materials:
+	for mat in mesh.materials:
 
-			texIndex = None
-			normTexIndex = None
+		texIndex = None
+		normTexIndex = None
 
-			image_map = {
-				"map_Kd": "base_color_texture",
-				"map_Bump": "normalmap_texture",
-			}
+		image_map = {
+			"map_Kd": "base_color_texture",
+			"map_Bump": "normalmap_texture",
+		}
 
-			mat_wrap = node_shader_utils.PrincipledBSDFWrapper(mat) if mat else None
+		mat_wrap = node_shader_utils.PrincipledBSDFWrapper(mat) if mat else None
 
-			for key, mat_wrap_key in sorted(image_map.items()):
-				if mat_wrap_key is None:
-					continue
-				tex_wrap = getattr(mat_wrap, mat_wrap_key, None)
-				if tex_wrap is None:
-					continue
+		for key, mat_wrap_key in sorted(image_map.items()):
+			if mat_wrap_key is None:
+				continue
+			tex_wrap = getattr(mat_wrap, mat_wrap_key, None)
+			if tex_wrap is None:
+				continue
 
-				image = tex_wrap.image
+			image = tex_wrap.image
 
-				if image is None:
-					continue
+			if image is None:
+				continue
 
-				val = imagesMap.get(image.filepath)
+			val = imagesMap.get(image.filepath)
 
-				if val is None:
-					topImageIndex += 1
-					imagesMap[image.filepath] = topImageIndex
-					val = topImageIndex
-					images.append(image)
+			if val is None:
+				topImageIndex += 1
+				imagesMap[image.filepath] = topImageIndex
+				val = topImageIndex
+				images.append(image)
 
-				if key == "map_Bump":	
-					normTexIndex = val
-				elif key == "map_Kd":
-					texIndex = val
+			if key == "map_Bump":	
+				normTexIndex = val
+			elif key == "map_Kd":
+				texIndex = val
 
-				if normTexIndex and texIndex:
-					break
+			if normTexIndex and texIndex:
+				break
 
-					# options = []
-					# if key == "map_Bump":
-						# if mat_wrap.normalmap_strength != 1.0:
-							# options.append('-bm %.6f' % mat_wrap.normalmap_strength)
-
-
-			out += struct.pack("<i", texIndex or 0)
-			out += struct.pack("<i", normTexIndex or 0)
-
-			color = mat.diffuse_color
-
-			out += struct.pack("<4f", color[0], color[1], color[2], 1)
-			out += struct.pack("<4f", mat.specular_color[0], mat.specular_color[1], mat.specular_color[2], mat.specular_intensity)
+				# options = []
+				# if key == "map_Bump":
+					# if mat_wrap.normalmap_strength != 1.0:
+						# options.append('-bm %.6f' % mat_wrap.normalmap_strength)
 
 
-		out += struct.pack("<i", len(images))
+		out += struct.pack("<i", texIndex or 0)
+		out += struct.pack("<i", normTexIndex or 0)
 
-		for image in images:
-			WriteTexture(out, image)
+		color = mat.diffuse_color
+
+		out += struct.pack("<4f", color[0], color[1], color[2], 1)
+		out += struct.pack("<4f", mat.specular_color[0], mat.specular_color[1], mat.specular_color[2], mat.specular_intensity)
+
+
+	out += struct.pack("<i", len(images))
+
+	for image in images:
+		WriteTexture(out, image)
 
 
 	faces = [(index, face) for index, face in enumerate(mesh.polygons)]
@@ -211,19 +210,10 @@ def WriteFile(out, context, bones, GLOBAL_MATRIX=None, exportNavMesh=False):
 				uniquePacked.append(packed)
 				topElementIndex += 1
 
-			if exportNavMesh is False:
-
-				if materialElements[face.material_index] is None:
-					materialElements[face.material_index] = []
-				
-				materialElements[face.material_index].append(val)
-
-			else:
-				if len(materialElements) == 0:
-					list = []
-					materialElements.append(list)
-				
-				materialElements[0].append(val)
+			if materialElements[face.material_index] is None:
+				materialElements[face.material_index] = []
+			
+			materialElements[face.material_index].append(val)
 
 
 	out += struct.pack("<i", len(uniquePacked))
@@ -231,14 +221,11 @@ def WriteFile(out, context, bones, GLOBAL_MATRIX=None, exportNavMesh=False):
 	for packed in uniquePacked:
 	
 		
-		if exportNavMesh is False:
-			out += struct.pack("<3f", verts[packed[0]].co[0], verts[packed[0]].co[1], verts[packed[0]].co[2])
-			out += struct.pack("<2f", packed[1][0], packed[1][1])
-			out += struct.pack("<3f", packed[2][0], packed[2][1], packed[2][2])
-			out += struct.pack("<4f", packed[3][0], packed[3][1], packed[3][2], packed[3][3])
-		else:
-			out += struct.pack("<3f", verts[packed[0]].co[0], verts[packed[0]].co[1], verts[packed[0]].co[2])
-		
+		out += struct.pack("<3f", verts[packed[0]].co[0], verts[packed[0]].co[1], verts[packed[0]].co[2])
+		out += struct.pack("<2f", packed[1][0], packed[1][1])
+		out += struct.pack("<3f", packed[2][0], packed[2][1], packed[2][2])
+		out += struct.pack("<4f", packed[3][0], packed[3][1], packed[3][2], packed[3][3])
+
 		if bones:
 	
 			weights = []
@@ -281,6 +268,37 @@ def WriteFile(out, context, bones, GLOBAL_MATRIX=None, exportNavMesh=False):
 
 	return mesh
 
+def WriteNavMesh(out, context, bones, GLOBAL_MATRIX=None):
+
+
+	selected = context.selected_objects[0]
+
+	mesh = GetMesh(selected, context, GLOBAL_MATRIX, True)
+
+
+	faces = [(index, face) for index, face in enumerate(mesh.polygons)]
+	faces.sort(key=lambda face: face[1].material_index)
+	materialElements = [[] for i in range(0, len(mesh.materials))]
+
+	mesh.calc_normals_split()
+	verts = mesh.vertices
+	loops = mesh.loops
+
+	out += struct.pack("<i",len(faces))
+	for fIndex, face in faces:
+
+		fV = [(vI, vIndex, lIndex) for vI, (vIndex, lIndex) in enumerate(zip(face.vertices, face.loop_indices))]
+
+		v1 = mathutils.Vector(verts[fV[0][1]].co)
+		v2 = mathutils.Vector(verts[fV[1][1]].co)
+		v3 = mathutils.Vector(verts[fV[2][1]].co)
+
+		out += struct.pack("<3f", v1.x, v1.y, v1.z)
+		out += struct.pack("<3f", v2.x, v2.y, v2.z)
+		out += struct.pack("<3f", v3.x, v3.y, v3.z)
+		
+
+	return mesh
 
 def WriteAnimation(out, action, armatureObj, bones, GLOBAL_MATRIX=None):
 
@@ -516,7 +534,7 @@ def Export(operator, context, filepath, globalMatrix=None, exportAnim=True, expo
 	
 		out = bytearray()
 
-		mesh = WriteFile(out, context, bones, globalMatrix, exportNavMesh)
+		mesh = WriteFile(out, context, bones, globalMatrix)
 
 		if armatureObj:
 			WriteSkeleton(out, context, selected, bones, mesh, globalMatrix)
@@ -532,7 +550,7 @@ def Export(operator, context, filepath, globalMatrix=None, exportAnim=True, expo
 	
 		out = bytearray()
 
-		mesh = WriteFile(out, context, bones, globalMatrix, exportNavMesh)
+		mesh = WriteNavMesh(out, context, bones, globalMatrix)
 
 		fp = open(baseName + ".nav", "wb")
 
