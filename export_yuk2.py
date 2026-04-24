@@ -64,7 +64,7 @@ def WriteFile(out, context, bones, GLOBAL_MATRIX=None):
 
 	mesh = GetMesh(selected, context, GLOBAL_MATRIX, True)
 
-	uvLayer = mesh.uv_layers.active	.data[:]
+	uvLayer = mesh.uv_layers.active.data[:]
 
 
 	out += struct.pack("<i", len(mesh.materials))
@@ -138,6 +138,7 @@ def WriteFile(out, context, bones, GLOBAL_MATRIX=None):
 	faces.sort(key=lambda face: face[1].material_index)
 	materialElements = [[] for i in range(0, len(mesh.materials))]
 
+			
 	mesh.calc_normals_split()
 	verts = mesh.vertices
 	loops = mesh.loops
@@ -145,6 +146,10 @@ def WriteFile(out, context, bones, GLOBAL_MATRIX=None):
 	vertMap = {}
 	uniquePacked = []
 	topElementIndex = 0
+
+	key_blocks =  mesh.shape_keys.key_blocks
+	shape_keys = [[] for i in range(0, len(key_blocks))]
+	
 
 
 	for fIndex, face in faces:
@@ -214,9 +219,22 @@ def WriteFile(out, context, bones, GLOBAL_MATRIX=None):
 				materialElements[face.material_index] = []
 			
 			materialElements[face.material_index].append(val)
+			
+			if len(key_blocks):
+				i = 0
+				for key_block in key_blocks:
+					group_name = key_block.vertex_group
+					if len(verts[v].groups) > 0:
+						for group in verts[v].groups:
+							if selected.vertex_groups[group.group].name == group_name:
+								if shape_keys[i] is None:
+									shape_keys[i] = []
+								shape_keys[i].append(val)
+					i = i + 1
 
 
 	out += struct.pack("<i", len(uniquePacked))
+
 
 	for packed in uniquePacked:
 	
@@ -250,6 +268,8 @@ def WriteFile(out, context, bones, GLOBAL_MATRIX=None):
 				weights[1][0], weights[2][0], weights[3][0])
 			out += struct.pack("<4f", weights[0][1], weights[1][1], weights[2][1], weights[3][1])
 
+							
+
 
 	# out += zlib.compress(out, 9)[2:-4]
 	# out += data
@@ -263,6 +283,15 @@ def WriteFile(out, context, bones, GLOBAL_MATRIX=None):
 	for i in range(0, len(materialElements)):
 		if materialElements[i]:
 			for element in materialElements[i]:
+				out += struct.pack("<i", element)
+
+	out += struct.pack("<i", len(shape_keys))
+	for i in range(0, len(shape_keys)):
+		out += struct.pack("<i", len(shape_keys[i]))
+
+	for i in range(0, len(shape_keys)):
+		if shape_keys[i]:
+			for element in shape_keys[i]:
 				out += struct.pack("<i", element)
 
 
@@ -528,7 +557,6 @@ def Export(operator, context, filepath, globalMatrix=None, exportAnim=True, expo
 
 		for index in range(0, len(poseBones)):
 			bones[poseBones[index].bone.name] = index
-			print(poseBones[index].bone.name, index)
 
 	if exportMesh:
 	
