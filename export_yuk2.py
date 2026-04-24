@@ -8,7 +8,7 @@ import math
 import bpy_extras.io_utils
 from bpy_extras import node_shader_utils
 
-def GetMesh(obj, context, GLOBAL_MATRIX, doTransform):
+def GetMesh(obj, context, GLOBAL_MATRIX, doTransform, shapekey=0,useshapekey=False):
 
 	mesh = None
 
@@ -25,7 +25,7 @@ def GetMesh(obj, context, GLOBAL_MATRIX, doTransform):
 
 	import bmesh
 	bm = bmesh.new()
-	bm.from_mesh(mesh)
+	bm.from_mesh(mesh,shape_key_index=shapekey,use_shape_key=useshapekey)
 	bmesh.ops.triangulate(bm, faces=bm.faces)
 	bm.to_mesh(mesh)
 	bm.free()
@@ -62,7 +62,7 @@ def WriteFile(out, context, bones, GLOBAL_MATRIX=None):
 	selected = context.selected_objects[0]
 	armatureObj = selected.find_armature()
 
-	mesh = GetMesh(selected, context, GLOBAL_MATRIX, True)
+	mesh = GetMesh(selected, context, GLOBAL_MATRIX, True,0,False)
 
 	uvLayer = mesh.uv_layers.active.data[:]
 
@@ -147,7 +147,11 @@ def WriteFile(out, context, bones, GLOBAL_MATRIX=None):
 	uniquePacked = []
 	topElementIndex = 0
 
-	key_blocks =  mesh.shape_keys.key_blocks
+	shape_keys =  mesh.shape_keys
+	key_blocks = []
+	if shape_keys:
+		key_blocks = shape_keys.key_blocks
+		
 	shape_keys = [[] for i in range(0, len(key_blocks))]
 	
 
@@ -294,6 +298,16 @@ def WriteFile(out, context, bones, GLOBAL_MATRIX=None):
 			for element in shape_keys[i]:
 				out += struct.pack("<i", element)
 
+	if key_blocks:
+		i = 0
+		for key_block in key_blocks:
+			if shape_keys[i]:
+				for element in shape_keys[i]:
+					v = uniquePacked[element][0]
+					vert = mathutils.Vector(key_block.data[v].co)
+					# vert = vert @ (GLOBAL_MATRIX @ selected.matrix_world)
+					out += struct.pack("<3f", vert.x,vert.y,vert.z)
+			i = i + 1
 
 	return mesh
 
@@ -302,7 +316,7 @@ def WriteNavMesh(out, context, bones, GLOBAL_MATRIX=None):
 
 	selected = context.selected_objects[0]
 
-	mesh = GetMesh(selected, context, GLOBAL_MATRIX, True)
+	mesh = GetMesh(selected, context, GLOBAL_MATRIX, True, 0, False)
 
 
 	faces = [(index, face) for index, face in enumerate(mesh.polygons)]
@@ -501,7 +515,7 @@ def WriteCollision(out, context, selected, GLOBAL_MATRIX=None):
 
 	for selected in context.selected_objects:
 	
-		mesh = GetMesh(selected, context, GLOBAL_MATRIX, False)
+		mesh = GetMesh(selected, context, GLOBAL_MATRIX, False, 0, False)
 
 		# mesh = selected.to_mesh(preserve_all_data_layers=True, depsgraph=None)
 
