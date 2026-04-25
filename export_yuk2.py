@@ -8,7 +8,7 @@ import math
 import bpy_extras.io_utils
 from bpy_extras import node_shader_utils
 
-def GetMesh(obj, context, GLOBAL_MATRIX, doTransform, shapekey=0,useshapekey=False):
+def GetMesh(obj, context, GLOBAL_MATRIX, doTransform):
 
 	mesh = None
 
@@ -19,13 +19,13 @@ def GetMesh(obj, context, GLOBAL_MATRIX, doTransform, shapekey=0,useshapekey=Fal
 
 	if doTransform is True:
 		if GLOBAL_MATRIX:
-			mesh.transform(GLOBAL_MATRIX @ obj.matrix_world)
+			mesh.transform(GLOBAL_MATRIX @ obj.matrix_world, shape_keys=True)
 		else:
-			mesh.transform(obj.matrix_world)
+			mesh.transform(obj.matrix_world, shape_keys=True)
 
 	import bmesh
 	bm = bmesh.new()
-	bm.from_mesh(mesh,shape_key_index=shapekey,use_shape_key=useshapekey)
+	bm.from_mesh(mesh)
 	bmesh.ops.triangulate(bm, faces=bm.faces)
 	bm.to_mesh(mesh)
 	bm.free()
@@ -50,11 +50,11 @@ def WriteTexture(out, image):
 
 	# out += zlib.compress(data, 9)[2:-4]
 
-	out += bytes(map(int, [0xFF * i for i in image.pixels]))
+	# out += bytes(map(int, [0xFF * i for i in image.pixels]))
 
 	# out += data
 
-	# out += zlib.compress(bytes(map(int, image.pixels)), 9)[2:-4]
+	out += zlib.compress(bytes(map(int, [0xFF * i for i in image.pixels])), 9)[2:-4]
 
 def WriteFile(out, context, bones, GLOBAL_MATRIX=None):
 
@@ -62,7 +62,7 @@ def WriteFile(out, context, bones, GLOBAL_MATRIX=None):
 	selected = context.selected_objects[0]
 	armatureObj = selected.find_armature()
 
-	mesh = GetMesh(selected, context, GLOBAL_MATRIX, True,0,False)
+	mesh = GetMesh(selected, context, GLOBAL_MATRIX, True)
 
 	uvLayer = mesh.uv_layers.active.data[:]
 
@@ -316,7 +316,7 @@ def WriteNavMesh(out, context, bones, GLOBAL_MATRIX=None):
 
 	selected = context.selected_objects[0]
 
-	mesh = GetMesh(selected, context, GLOBAL_MATRIX, True, 0, False)
+	mesh = GetMesh(selected, context, GLOBAL_MATRIX, True)
 
 
 	faces = [(index, face) for index, face in enumerate(mesh.polygons)]
@@ -515,7 +515,7 @@ def WriteCollision(out, context, selected, GLOBAL_MATRIX=None):
 
 	for selected in context.selected_objects:
 	
-		mesh = GetMesh(selected, context, GLOBAL_MATRIX, False, 0, False)
+		mesh = GetMesh(selected, context, GLOBAL_MATRIX, False)
 
 		# mesh = selected.to_mesh(preserve_all_data_layers=True, depsgraph=None)
 
