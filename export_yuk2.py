@@ -22,7 +22,9 @@ def GetMesh(obj, context, GLOBAL_MATRIX, doTransform):
 			mesh.transform(GLOBAL_MATRIX @ obj.matrix_world, shape_keys=True)
 		else:
 			mesh.transform(obj.matrix_world, shape_keys=True)
-
+	else:
+		mesh.transform(obj.matrix_world.inverted() @ GLOBAL_MATRIX @ obj.matrix_world, shape_keys=True)
+			
 	import bmesh
 	bm = bmesh.new()
 	bm.from_mesh(mesh)
@@ -546,7 +548,7 @@ def WriteCollision(out, context, selected, GLOBAL_MATRIX=None):
 		out += struct.pack("<ffffff", cube[0], cube[1], cube[2], cube[3], cube[4], cube[5])
 
 
-		pos, rot, scale = (GLOBAL_MATRIX @ selected.matrix_world).decompose()
+		pos, rot, scale = ( selected.matrix_world).decompose()
 		out += struct.pack("<ffffffffff", pos.x, pos.y, pos.z, rot.x, rot.y, rot.z, rot.w,scale.x, scale.y, scale.z)
 
 
