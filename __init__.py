@@ -57,7 +57,7 @@ class YUK2Include(bpy.types.Panel):
 
 		layout.prop(operator, "exportMesh")
 		layout.prop(operator, "exportAnim")
-		layout.prop(operator, "exportNavMesh")
+		layout.prop(operator, "exportPolySoupMesh")
 		layout.prop(operator, "exportCollision")
 
 
@@ -79,8 +79,8 @@ class Exportyuk(bpy.types.Operator, ExportHelper):
 			description="Export current animation",
 			default=False,
 			)
-	exportNavMesh: BoolProperty(
-			name="Export Navigation mesh",
+	exportPolySoupMesh: BoolProperty(
+			name="Export Polysoup mesh",
 			description="Export navigation mesh",
 			default=False,
 			)

@@ -35,10 +35,13 @@ def GetMesh(obj, context, GLOBAL_MATRIX, doTransform):
 
 def WriteTexture(out, image):
 
-	data = bytearray(image.size[0] * image.size[1] * image.channels)
+	# data = bytearray(image.size[0] * image.size[1] * image.channels)
 
 	out += struct.pack("<iii", image.size[0], image.size[1], image.channels)
 
+	out += struct.pack("<i", len(image.filepath))
+	out += bytes(image.filepath, "utf-8")
+	print(bytes(image.filepath, "utf-8") + b'\x00' )
 	# pixels = list(image.pixels)
 
 	# for k in range(0, image.size[1] * image.size[0]):
@@ -54,7 +57,7 @@ def WriteTexture(out, image):
 
 	# out += data
 
-	out += zlib.compress(bytes(map(int, [0xFF * i for i in image.pixels])), 9)[2:-4]
+	# out += zlib.compress(bytes(map(int, [0xFF * i for i in image.pixels])), 9)[2:-4]
 
 def WriteFile(out, context, bones, GLOBAL_MATRIX=None):
 
@@ -311,8 +314,7 @@ def WriteFile(out, context, bones, GLOBAL_MATRIX=None):
 
 	return mesh
 
-def WriteNavMesh(out, context, bones, GLOBAL_MATRIX=None):
-
+def WritePolySoup(out, context, bones, GLOBAL_MATRIX=None):
 
 	selected = context.selected_objects[0]
 
@@ -321,7 +323,6 @@ def WriteNavMesh(out, context, bones, GLOBAL_MATRIX=None):
 
 	faces = [(index, face) for index, face in enumerate(mesh.polygons)]
 	faces.sort(key=lambda face: face[1].material_index)
-	materialElements = [[] for i in range(0, len(mesh.materials))]
 
 	mesh.calc_normals_split()
 	verts = mesh.vertices
@@ -551,7 +552,7 @@ def WriteCollision(out, context, selected, GLOBAL_MATRIX=None):
 
 
 
-def Export(operator, context, filepath, globalMatrix=None, exportAnim=True, exportMesh=True, exportNavMesh=False, exportCollision=False):
+def Export(operator, context, filepath, globalMatrix=None, exportAnim=True, exportMesh=True, exportPolySoupMesh=False, exportCollision=False):
 
 	baseName = os.path.splitext(filepath)[0]
 
@@ -588,13 +589,13 @@ def Export(operator, context, filepath, globalMatrix=None, exportAnim=True, expo
 		fp.close()
 
 
-	if exportNavMesh:
+	if exportPolySoupMesh:
 	
 		out = bytearray()
 
-		mesh = WriteNavMesh(out, context, bones, globalMatrix)
+		mesh = WritePolySoup(out, context, bones, globalMatrix)
 
-		fp = open(baseName + ".nav", "wb")
+		fp = open(baseName + ".yuk", "wb")
 
 		fp.write(out)
 
